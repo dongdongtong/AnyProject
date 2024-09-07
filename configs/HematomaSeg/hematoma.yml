@@ -1,0 +1,23 @@
+# Dataset
+DATASET:
+  NAME: HematomaSegDataset
+  ROOT: /home/ubuntu/data/HematomaSeg
+  SOURCE_DOMAINS: ['CT']
+  TARGET_DOMAINS: ['']
+  FOLD: 0
+
+
+DATALOADER:
+  TRAIN_X:
+    BATCH_SIZE: 16
+    SAMPLER: RandomSampler
+  TEST:
+    BATCH_SIZE: 100
+  NUM_WORKERS: 8
+  
+
+INPUT:
+  SIZE: (256, 256, 24)
+  ROI_SIZE: (96, 96, 8)
+  INTERPOLATION: "bicubic"
+  TRANSFORMS: hematoma_seg_transforms  # a function
