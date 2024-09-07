@@ -31,7 +31,7 @@ from utils import (
 )
 
 
-TRAINER_REGISTRY.register()
+@TRAINER_REGISTRY.register()
 class HematomaSeg(TrainerX):
     """We perform hematoma segmentation using UNet.
     """

@@ -21,8 +21,6 @@ from sklearn.model_selection import KFold
 
 from .base_dataset import DatasetBase, Datum, SegmentationDatum
 from .build import DATASET_REGISTRY, DATASET_WRAPPER_REGISTRY
-
-from utils import read_json, mkdir_if_missing
     
 
 import os
@@ -35,7 +33,7 @@ from typing import Dict, List
 from utils import read_json, mkdir_if_missing, write_json
 
 
-DATASET_REGISTRY.register()
+@DATASET_REGISTRY.register()
 class HematomaSegDataset(DatasetBase):
     # generate data list and saved!
     # make a data structure for hematoma segmentation

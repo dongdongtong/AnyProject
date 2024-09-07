@@ -1,5 +1,4 @@
-from utils.register import Registry
-from utils.tools import check_availability
+from utils import Registry, check_availability
 
 TRAINER_REGISTRY = Registry("TRAINER")
 

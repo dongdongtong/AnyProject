@@ -7,6 +7,7 @@ from yacs.config import CfgNode as CN
 _C = CN()
 
 _C.VERSION = 1
+_C.DESCRIPTION = ""
 
 # Directory to save the output files (like log.txt and model weights)
 _C.OUTPUT_DIR = "./output"
@@ -326,3 +327,5 @@ _C.MODEL.OUT_CHANNELS = 3
 _C.MODEL.ACT = "leakyrelu"
 _C.MODEL.NORM = "INSTANCE"
 _C.MODEL.RES_BLOCK = False
+_C.MODEL.DEEP_SUPERVISION = False
+_C.MODEL.DEEP_SUPR_NUM = 3

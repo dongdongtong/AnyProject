@@ -3,6 +3,7 @@
 #cd ../..
 
 export HF_ENDPOINT=https://hf-mirror.com
+export CUDA_VISIBLE_DEVICES=0
 
 # custom config
 DATA="/dingshaodong/projects/hematoma_meta/data/preprocessed/resampled"
@@ -26,12 +27,12 @@ if [ -d "$DIR" ]; then
 else
     echo "Run this job and save the output to ${DIR}"
 
-    python train.py \
+    python3 train.py \
     --root ${DATA} \
     --seed ${SEED} \
     --trainer ${TRAINER} \
-    --dataset-config-file configs/uda/datasets/${DATASET}.yaml \
-    --config-file configs/uda/trainers/${TRAINER}/${CFG}.yaml \
+    --dataset-config-file configs/datasets/${DATASET}.yml \
+    --config-file configs/trainers/${TRAINER}/${CFG}.yml \
     --source-domains ${SOURCE_DOMAINS[*]} \
-    --output-dir ${DIR} \
+    --output-dir ${DIR}
 fi

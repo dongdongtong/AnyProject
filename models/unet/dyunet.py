@@ -314,7 +314,7 @@ class DynUNet(nn.Module):
                 module.bias = nn.init.constant_(module.bias, 0)
 
 
-MODEL_REGISTRY.register()
+@MODEL_REGISTRY.register()
 def dynunet(cfg):
     """This is a modified unet of monai.dynunet.
     We apply stride 2 to the first conv, thus the upsample will only upsample to (W//2, H//2, D//2) size.

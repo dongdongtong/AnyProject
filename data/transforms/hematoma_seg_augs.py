@@ -2,10 +2,10 @@ import torch
 
 import monai.transforms as tfs
 
-from transforms import TRANSFORM_REGISTRY
+from .build import TRANSFORM_REGISTRY
 
 
-TRANSFORM_REGISTRY.register()
+@TRANSFORM_REGISTRY.register()
 def hematoma_seg_transforms(cfg, is_train=True, only_other_transforms=False):
     patch_size = cfg['patch_size']
     
