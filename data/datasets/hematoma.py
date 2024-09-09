@@ -39,6 +39,8 @@ class HematomaSegDataset(DatasetBase):
     # make a data structure for hematoma segmentation
     # train val test split
     
+    spacing = (0.48828101, 0.48828101, 4.5)   # this spacing is the resampled spacing.
+    
     _lab2cname = {
         0: 'background',
         1: 'cerebral hematoma',

@@ -104,7 +104,7 @@ def main(args):
     if cfg.SEED >= 0:
         print("Setting fixed seed: {}".format(cfg.SEED))
         set_random_seed(cfg.SEED)
-        torch.multiprocessing.set_sharing_strategy('file_system')  # help fix run out of shared memory issue, suggested by Liyuan Zhang.
+        torch.multiprocessing.set_sharing_strategy('file_system')  # may help fix run out of shared memory issue, suggested by Liyuan Zhang.
     setup_logger(cfg.OUTPUT_DIR)
 
     if torch.cuda.is_available() and cfg.USE_CUDA:

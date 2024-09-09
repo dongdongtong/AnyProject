@@ -26,6 +26,8 @@ class Segmentation(EvaluatorBase):
         self._per_class_res = defaultdict(lambda: defaultdict(list))
         
         self.need_other_metrics = cfg.TEST.OTHER_METRICS
+        
+        self.spacing = kwargs.get("spacing", None)
 
     def reset(self):
         self._samples = 0
@@ -41,6 +43,9 @@ class Segmentation(EvaluatorBase):
     def process(self, mo, gt, spacing=None):
         # mo (torch.Tensor): model output [B, num_classes, height, width, ...]
         # gt (torch.LongTensor): ground truth [B, height, width, ...]
+        # spacing (tuple): spacing of the image (spacing_x, spacing_y, spacing_z)
+        if self.spacing is None:
+            self.spacing = spacing
         
         pred = mo.max(1)[1].cpu().numpy()
         gt = gt.cpu().numpy()
@@ -58,6 +63,7 @@ class Segmentation(EvaluatorBase):
                     self._per_class_res[label]["precision"].append(precision_val)
                     
                     if self.need_other_metrics:
+                        assert self.spacing is not None, "Spacing is not provided for other metrics."
                         asd_val = asd(pred_label, gt_label, spacing)
                         assd_val = assd(pred_label, gt_label, spacing)
                         hd95_val = hd95(pred_label, gt_label, spacing)
@@ -83,8 +89,8 @@ class Segmentation(EvaluatorBase):
         _precisions = []
         
         for label, cname in self._lab2cname.items():
-            dice_val = np.mean(self._per_class_res[label]["dice"])
-            precision_val = np.mean(self._per_class_res[label]["precision"])
+            dice_val = 100 * np.mean(self._per_class_res[label]["dice"])
+            precision_val = 100 * np.mean(self._per_class_res[label]["precision"])
             
             _dices.append(dice_val)
             _precisions.append(precision_val)
@@ -103,9 +109,9 @@ class Segmentation(EvaluatorBase):
                 "=> result\n"
                 f"* total: {self._samples:,}\n"
                 f"* dice: {np.mean(_dices):.1f}%\n"
-                f"* asd: {np.mean(_asds):.1f}%\n"
-                f"* assd: {np.mean(_assds):.1f}%\n"
-                f"* hd95: {np.mean(_hd95s):.1f}%\n"
+                f"* asd: {np.mean(_asds):.3f}mm\n"
+                f"* assd: {np.mean(_assds):.3f}mm\n"
+                f"* hd95: {np.mean(_hd95s):.3f}mm\n"
                 f"* precision: {np.mean(_precisions):.1f}%\n"
             )
         else:
@@ -119,29 +125,15 @@ class Segmentation(EvaluatorBase):
         results["dice"] = np.mean(_dices)
         results["precision"] = np.mean(_precisions)
 
-        # if self._per_class_res is not None:
-        #     labels = list(self._per_class_res.keys())
-        #     labels.sort()
-
-        #     print("=> per-class result")
-        #     accs = []
-
-        #     for label in labels:
-        #         classname = self._lab2cname[label]
-        #         res = self._per_class_res[label]
-        #         correct = sum(res)
-        #         total = len(res)
-        #         acc = 100.0 * correct / total
-        #         accs.append(acc)
-        #         print(
-        #             f"* class: {label} ({classname})\t"
-        #             f"total: {total:,}\t"
-        #             f"correct: {correct:,}\t"
-        #             f"acc: {acc:.1f}%"
-        #         )
-        #     mean_acc = np.mean(accs)
-        #     print(f"* average: {mean_acc:.1f}%")
-
-        #     results["perclass_accuracy"] = mean_acc
+        if self._per_class_res is not None:
+            for label, cname in self._lab2cname.items():
+                print(
+                    f"* class: {label} ({cname})\t"
+                    f"dice: {_dices[label]:.1f}%\t"
+                    f"precision: {_precisions[label]:.1f}%\t"
+                )
+                
+                results[f"dice_{label}"] = _dices[label]
+                results[f"precision_{label}"] = _precisions[label]
 
         return results

@@ -25,6 +25,7 @@ from ..build import TRAINER_REGISTRY
 from ..base_trainer import TrainerX
 from optim import build_optimizer, build_lr_scheduler
 from models import build_model as build_modeling
+from evaluation import build_evaluator
 
 from utils import (
     MetricMeter, AverageMeter, load_pretrained_weights, 
@@ -41,6 +42,9 @@ class HematomaSeg(TrainerX):
         assert cfg.TRAINER.HEMATOMASEG.PREC in ["fp16", "fp32", "amp"]
 
     def build_model(self):
+        # NOTE: we rebuild the evaluator here for segmentation task
+        self.evaluator = build_evaluator(cfg, lab2cname=self.lab2cname, spacing=self.dm.dataset.spacing)
+        
         cfg = self.cfg
         classnames = self.dm.dataset.classnames
         
