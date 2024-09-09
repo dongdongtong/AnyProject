@@ -18,4 +18,4 @@ def build_dataset_wrapper(cfg):
     check_availability(cfg.DATASET_WRAPPER.NAME, avai_dataset_wrappers)
     if cfg.VERBOSE:
         print("Loading dataset wrapper: {}".format(cfg.DATASET_WRAPPER.NAME))
-    return DATASET_WRAPPER_REGISTRY.get(cfg.DATASET_WRAPPER.NAME)(cfg)
+    return DATASET_WRAPPER_REGISTRY.get(cfg.DATASET_WRAPPER.NAME)

@@ -49,7 +49,7 @@ class HematomaSegDataset(DatasetBase):
     
     _num_classes = 3
     
-    dataset_json_file = "high_quality.json"
+    dataset_json_file = "hematoma_fingerprint_grouped.json"
     
     def __init__(self, cfg):
         self.cfg = cfg
@@ -99,9 +99,9 @@ class HematomaSegDataset(DatasetBase):
         
         train_x = self.read_data(fold_json['training'], domain)
         
-        valid_x = self.read_data(fold_json, domain)
+        valid_x = self.read_data(fold_json['validation'], domain)
         
-        test_x = self.read_data(fold_json, domain)
+        test_x = self.read_data(fold_json['testing'], domain)
         
         super().__init__(train_x=train_x, train_u=None, val=valid_x, test=test_x, num_classes=self._num_classes, lab2cname=self._lab2cname, classnames=self._classnames)
     
@@ -109,12 +109,12 @@ class HematomaSegDataset(DatasetBase):
         data = []
         
         for item in data_json:
-            baseline_image_path = item['baseline_image']
-            baseline_label_path = item['baseline_label']
-            followup_image_path = item['24h_image']
-            followup_label_path = item['24h_label']
+            baseline_image_path = osp.join(self.dataset_dir, item['baseline_image'])
+            baseline_label_path = osp.join(self.dataset_dir, item['baseline_label'])
+            followup_image_path = osp.join(self.dataset_dir, item['24h_image'])
+            followup_label_path = osp.join(self.dataset_dir, item['24h_label'])
             
-            hematoma_expansion_label = item['hematoma_expansion']
+            hematoma_expansion_label = item['expansion_label']
             classname = "hematoma expansion" if hematoma_expansion_label == 1 else "no hematoma expansion"
             
             data.append(SegmentationDatum(baseline_image_path, baseline_label_path, domain, self._lab2cname, hematoma_expansion_label, classname))
@@ -123,7 +123,7 @@ class HematomaSegDataset(DatasetBase):
         return data
         
 
-DATASET_WRAPPER_REGISTRY.register()
+@DATASET_WRAPPER_REGISTRY.register()
 class HematomaSegWrapper(Dataset):
 
     def __init__(self, cfg, data_source, base_transform=None, other_transform=None, is_train=False):
@@ -178,19 +178,25 @@ class HematomaSegWrapper(Dataset):
         if isinstance(tfed_dict, dict):
             tfed_img = tfed_dict['img']
             tfed_seg = tfed_dict['seg']
-        elif isinstance(tfed_dict, list):  # multi patch training
-            tfed_img = [tfed_patch_dict['img'] for tfed_patch_dict in tfed_dict]
-            tfed_seg = [tfed_patch_dict['seg'] for tfed_patch_dict in tfed_dict]
+        elif isinstance(tfed_dict, list):  # multi patch training, do not use list to avoid memory leak
+            len_tfed_dict = len(tfed_dict)
+            img_size = tfed_dict[0]['img'].shape
+            tfed_img = torch.zeros(len_tfed_dict, *img_size)
+            tfed_seg = torch.zeros(len_tfed_dict, *img_size)
+
+            for i, tfed_patch_dict in enumerate(tfed_dict):
+                tfed_img[i] = tfed_patch_dict['img']
+                tfed_seg[i] = tfed_patch_dict['seg']
         else:
             raise ValueError(f"Unknown type of tfed_dict: {type(tfed_dict)}")
         
         return tfed_img, tfed_seg
 
 
-DATASET_WRAPPER_REGISTRY.register()
-class HematomaSegDataCachedWrapper(CacheDataset):
-    def __init__(self, cfg, data_source, base_transform=None, other_transform=None, is_train=False, cache_num=0, ):
-        cache_num = len(data_source)
+@DATASET_WRAPPER_REGISTRY.register()
+class HematomaSegCachedWrapper(CacheDataset):
+    def __init__(self, cfg, data_source, base_transform=None, other_transform=None, is_train=False):
+        cache_num = len(data_source) if cfg.DATASET_WRAPPER.CACHE_NUM == -1 else cfg.DATASET_WRAPPER.CACHE_NUM
         num_workers = os.cpu_count()
         
         data_json = [
@@ -245,8 +251,14 @@ class HematomaSegDataCachedWrapper(CacheDataset):
             tfed_img = tfed_dict['img']
             tfed_seg = tfed_dict['seg']
         elif isinstance(tfed_dict, list):  # multi patch training
-            tfed_img = [tfed_patch_dict['img'] for tfed_patch_dict in tfed_dict]
-            tfed_seg = [tfed_patch_dict['seg'] for tfed_patch_dict in tfed_dict]
+            len_tfed_dict = len(tfed_dict)
+            img_size = tfed_dict[0]['img'].shape
+            tfed_img = torch.zeros(len_tfed_dict, *img_size)
+            tfed_seg = torch.zeros(len_tfed_dict, *img_size)
+
+            for i, tfed_patch_dict in enumerate(tfed_dict):
+                tfed_img[i] = tfed_patch_dict['img']
+                tfed_seg[i] = tfed_patch_dict['seg']
         else:
             raise ValueError(f"Unknown type of tfed_dict: {type(tfed_dict)}")
         

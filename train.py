@@ -72,6 +72,7 @@ def extend_cfg(cfg):
     cfg.TRAINER.HEMATOMASEG = CN()
     cfg.TRAINER.HEMATOMASEG.PREC = "fp16"
     cfg.TRAINER.HEMATOMASEG.SLIDING_WINDOW_INFER = True
+    cfg.TRAINER.HEMATOMASEG.METHOD = 1
     
 
 def setup_cfg(args):

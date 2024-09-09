@@ -23,7 +23,7 @@ class Segmentation(EvaluatorBase):
         self._hd95s = []
         self._precisions = []
         
-        self._per_class_res = defaultdict(defaultdict(list))
+        self._per_class_res = defaultdict(lambda: defaultdict(list))
         
         self.need_other_metrics = cfg.TEST.OTHER_METRICS
 
@@ -36,44 +36,42 @@ class Segmentation(EvaluatorBase):
         self._hd95s = []
         self._precisions = []
 
-        self._per_class_res = defaultdict(defaultdict(list))
+        self._per_class_res = defaultdict(lambda: defaultdict(list))
 
     def process(self, mo, gt, spacing=None):
-        # mo (torch.Tensor): model output [1, num_classes, height, width, ...]
-        # gt (torch.LongTensor): ground truth [1, height, width, ...]
-        
-        assert mo.shape[0] == 1, "Batch size must be 1 for model output in segmentation evaluation"
-        assert gt.shape[0] == 1, "Batch size must be 1 for ground truth in segmentation evaluation"
+        # mo (torch.Tensor): model output [B, num_classes, height, width, ...]
+        # gt (torch.LongTensor): ground truth [B, height, width, ...]
         
         pred = mo.max(1)[1].cpu().numpy()
         gt = gt.cpu().numpy()
         
-        for label, cname in self._lab2cname.items():
-            gt_label = (gt == label).astype(np.float32)
-            pred_label = (pred == label).astype(np.float32)
-            
-            if np.sum(gt_label) > 0:
-                dice_val = dc(pred_label, gt_label)
-                precision_val = precision_score(gt_label, pred_label)
+        for pred_, gt_ in zip(pred, gt):  # process multi-batch outputs
+            for label, cname in self._lab2cname.items():
+                gt_label = (gt_ == label).astype(np.float32)
+                pred_label = (pred_ == label).astype(np.float32)
                 
-                self._per_class_res[label]["dice"].append(dice_val)
-                self._per_class_res[label]["precision"].append(precision_val)
-                
-                if self.need_other_metrics:
-                    asd_val = asd(pred_label, gt_label, spacing)
-                    assd_val = assd(pred_label, gt_label, spacing)
-                    hd95_val = hd95(pred_label, gt_label, spacing)
+                if np.sum(gt_label) > 0:
+                    dice_val = dc(pred_label, gt_label)
+                    precision_val = precision_score(gt_label.reshape(-1), pred_label.reshape(-1))
                     
-                    self._per_class_res[label]["asd"].append(asd_val)
-                    self._per_class_res[label]["assd"].append(assd_val)
-                    self._per_class_res[label]["hd95"].append(hd95_val)
-                
-            elif np.sum(gt_label) == 0 and np.sum(pred_label) > 0:
-                precision_val = precision_score(gt_label, pred_label)
-                
-                self._per_class_res[label]["precision"].append(precision_val)
-        
-        self._samples += 1
+                    self._per_class_res[label]["dice"].append(dice_val)
+                    self._per_class_res[label]["precision"].append(precision_val)
+                    
+                    if self.need_other_metrics:
+                        asd_val = asd(pred_label, gt_label, spacing)
+                        assd_val = assd(pred_label, gt_label, spacing)
+                        hd95_val = hd95(pred_label, gt_label, spacing)
+                        
+                        self._per_class_res[label]["asd"].append(asd_val)
+                        self._per_class_res[label]["assd"].append(assd_val)
+                        self._per_class_res[label]["hd95"].append(hd95_val)
+                    
+                elif np.sum(gt_label) == 0 and np.sum(pred_label) > 0:
+                    precision_val = precision_score(gt_label.reshape(-1), pred_label.reshape(-1))
+                    
+                    self._per_class_res[label]["precision"].append(precision_val)
+            
+            self._samples += 1
 
     def evaluate(self):
         results = OrderedDict()

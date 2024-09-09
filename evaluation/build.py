@@ -5,10 +5,10 @@ EVALUATOR_REGISTRY = Registry('EVALUATOR')
 
 def build_evaluator(cfg, lab2cname):
     avai_evaluators = EVALUATOR_REGISTRY.registered_names()
-    check_availability(cfg.EVALUATION.NAME, avai_evaluators)
+    check_availability(cfg.TEST.EVALUATOR, avai_evaluators)
     if cfg.VERBOSE:
-        print("Loading evaluator: {}".format(cfg.EVALUATION.NAME))
-    return EVALUATOR_REGISTRY.get(cfg.EVALUATION.NAME)(cfg, lab2cname)
+        print("Loading evaluator: {}".format(cfg.TEST.EVALUATOR))
+    return EVALUATOR_REGISTRY.get(cfg.TEST.EVALUATOR)(cfg, lab2cname)
 
 
 class EvaluatorBase:

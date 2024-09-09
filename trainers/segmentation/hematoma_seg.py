@@ -15,6 +15,7 @@ import torch.nn.functional as F
 
 import monai
 from monai.inferers import sliding_window_inference
+from monai.losses import DiceCELoss, DiceFocalLoss
 from functools import partial
 
 from torch.cuda.amp import autocast, GradScaler
@@ -60,7 +61,7 @@ class HematomaSeg(TrainerX):
             load_pretrained_weights(self.model, cfg.MODEL.INIT_WEIGHTS)
             
         self.model.to(self.device)
-        # NOTE: only give prompt_learner to the optimizer
+
         self.optim = build_optimizer(self.model, cfg.OPTIM)
         self.sched = build_lr_scheduler(self.optim, cfg.OPTIM)
         self.register_model("model", self.model, self.optim, self.sched)
@@ -91,6 +92,24 @@ class HematomaSeg(TrainerX):
             predictor=self.model,
             overlap=0.5,
         )
+        
+        # losses
+        self.dice_ce_criterion = DiceCELoss(
+            include_background=True,
+            to_onehot_y=True,
+            softmax=True,
+            reduction="mean",
+            batch=True,
+        )
+        
+        self.dice_focal_criterion = DiceFocalLoss(
+            include_background=True,
+            to_onehot_y=True,
+            softmax=True,
+            reduction="mean",
+            batch=True,
+            gamma=2.0,
+        )
 
     def model_inference(self, image):
         if self.cfg.TRAINER.HEMATOMASEG.SLIDING_WINDOW_INFER:
@@ -99,18 +118,39 @@ class HematomaSeg(TrainerX):
             out = self.model(image)
         return out
     
-    def get_loss(self, batch_x):
-        images, labels = self.parse_batch_train(batch_x)
-        
+    def dice_ce_loss(self, images, labels):
         logits = self.model(images)
         
-        loss = F.cross_entropy(logits, labels)
+        loss = self.dice_ce_criterion(logits, labels)
         
-        self.model_backward_and_update(loss, grad_record=True, names=['text_prompt_learner', 'prompt_learner_visual', 'visual_encoder.visual'])  # update all parameters
+        self.model_backward_and_update(loss, grad_record=True, names=['model', ])  # update all parameters
         
         return {
             "loss": loss.detach()
         }
+    
+    def dice_focal_loss(self, images, labels):
+        logits = self.model(images)
+        
+        loss = self.dice_focal_criterion(logits, labels)
+        
+        self.model_backward_and_update(loss, grad_record=True, names=['model', ])  # update all parameters
+        
+        return {
+            "loss": loss.detach()
+        }
+    
+    def get_loss(self, batch_x):
+        images, labels = self.parse_batch_train(batch_x)
+        
+        if self.cfg.TRAINER.HEMATOMASEG.METHOD == 1:
+            loss_dict = self.dice_ce_loss(images, labels)
+        elif self.cfg.TRAINER.HEMATOMASEG.METHOD == 2:
+            loss_dict = self.dice_focal_loss(images, labels)
+        else:
+            raise ValueError(f"Unknown method: {self.cfg.TRAINER.HEMATOMASEG.METHOD}")
+        
+        return loss_dict
 
     def forward_backward(self, batch_x):
         prec = self.cfg.TRAINER.HEMATOMASEG.PREC
@@ -132,9 +172,30 @@ class HematomaSeg(TrainerX):
     def parse_batch_train(self, batch_x):
         input_x = batch_x["img"]
         label_x = batch_x["seg"]
+        
+        if input_x.dim() == 5:
+            input_x = input_x.to(self.device)
+            label_x = label_x.to(self.device)
+        elif input_x.dim() == 6: # for patch-based training
+            batch_size = input_x.size(0)   # B
+            patch_num = input_x.size(1)    # num_sampels in monai.biascrop
+            img_size = input_x.size()[2:]  # W H D
+            input_x = input_x.reshape(batch_size * patch_num, *img_size)
+            label_x = label_x.reshape(batch_size * patch_num, *img_size)
+            input_x = input_x.to(self.device)
+            label_x = label_x.to(self.device)
+        else:
+            raise ValueError(f"Unknown dimension of input_x: {input_x.dim()}")
+        
+        return input_x, label_x
+
+    def parse_batch_test(self, batch):
+        input_x = batch["img"]
+        label_x = batch["seg"]
+        
         input_x = input_x.to(self.device)
         label_x = label_x.to(self.device)
-
+        
         return input_x, label_x
 
     def model_backward_and_update(self, loss, names=None, grad_record=False, grad_clip=False, grad_tag="g"):

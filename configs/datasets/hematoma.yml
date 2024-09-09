@@ -7,17 +7,22 @@ DATASET:
   FOLD: 0
 
 
+DATASET_WRAPPER:
+  NAME: HematomaSegWrapper  # HematomaSegWrapper HematomaSegCachedWrapper
+  CACHE_NUM: -1
+
 DATALOADER:
   TRAIN_X:
     BATCH_SIZE: 16
     SAMPLER: RandomSampler
   TEST:
-    BATCH_SIZE: 100
-  NUM_WORKERS: 8
+    BATCH_SIZE: 64
+  NUM_WORKERS: 32
   
 
 INPUT:
-  SIZE: (256, 256, 24)
-  ROI_SIZE: (96, 96, 8)
+  SIZE: (416, 416, 32)   # (w, h, d) (352, 416, 32), 352 is just OK, but for Rotate90 aug, we need increase it to 416 to be squared in-plane
+  ROI_SIZE: (128, 128, 12)
+  INTENSITY_RANGE: (0, 100)
   INTERPOLATION: "bicubic"
   TRANSFORMS: hematoma_seg_transforms  # a function

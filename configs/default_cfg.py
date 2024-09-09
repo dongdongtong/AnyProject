@@ -92,6 +92,14 @@ _C.DATASET.CIFAR_C_LEVEL = 1
 # Use all data in the unlabeled data set (e.g. FixMatch)
 _C.DATASET.ALL_AS_UNLABELED = False
 
+
+###########################
+# DatasetWrapper
+###########################
+_C.DATASET_WRAPPER = CN()
+_C.DATASET_WRAPPER.NAME = ""
+_C.DATASET_WRAPPER.CACHE_NUM = -1
+
 ###########################
 # Dataloader
 ###########################
@@ -210,6 +218,7 @@ _C.TRAIN.GRADIENT_ACCUMULATION_STEPS = 1
 ###########################
 _C.TEST = CN()
 _C.TEST.EVALUATOR = "Classification"
+_C.TEST.OTHER_METRICS = False   # in segmentation, we don't need other computation-heavy metrics like HD95, asd, etc.
 _C.TEST.PER_CLASS_RESULT = False
 # Compute confusion matrix, which will be saved
 # to $OUTPUT_DIR/cmat.pt
@@ -318,6 +327,8 @@ _C.TRAINER.FIXMATCH.STRONG_TRANSFORMS = ()
 ############################
 # Hematoma segmentation
 ############################
+_C.INPUT.INTENSITY_RANGE = (0, 100)
+
 _C.MODEL.NAME = ""
 _C.MODEL.KERNELS = ()
 _C.MODEL.STRIDES = ()

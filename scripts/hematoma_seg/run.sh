@@ -10,6 +10,7 @@ DATA="/dingshaodong/projects/hematoma_meta/data/preprocessed/resampled"
 TRAINER=HematomaSeg
 DATASET=hematoma
 SEED=$1
+METHOD=$2
 
 CFG=dyunet_ep50
 # SHOTS=16
@@ -21,7 +22,7 @@ SOURCE_DOMAINS=("high_quality")
 SOURCE_DOMAINS_STR="${SOURCE_DOMAINS[*]}"
 SOURCE_DOMAINS_STR="${SOURCE_DOMAINS_STR// /_}"  # Replace spaces with underscores
 
-DIR=output/${DATASET}/${TRAINER}/${CFG}/${SOURCE_DOMAINS_STR}/seed${SEED}
+DIR=output/${DATASET}/${TRAINER}/${CFG}/${SOURCE_DOMAINS_STR}/method${METHOD}_seed${SEED}
 if [ -d "$DIR" ]; then
     echo "Results are available in ${DIR}."
 else
@@ -34,5 +35,6 @@ else
     --dataset-config-file configs/datasets/${DATASET}.yml \
     --config-file configs/trainers/${TRAINER}/${CFG}.yml \
     --source-domains ${SOURCE_DOMAINS[*]} \
-    --output-dir ${DIR}
+    --output-dir ${DIR} \
+    TRAINER.HEMATOMASEG.METHOD ${METHOD}
 fi

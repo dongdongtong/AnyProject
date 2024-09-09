@@ -13,8 +13,9 @@ MODEL:
     - [3, 3, 3]
     - [3, 3, 3]
   STRIDES:
-    - [2, 2, 2]
-    - [2, 2, 2]
+    - [2, 2, 1]
+    - [2, 2, 1]
+    - [2, 2, 1]
     - [2, 2, 2]
     - [2, 2, 2]
   FILTERS: [64, 96, 128, 192, 256, 384, 512, 768, 1024]
@@ -44,7 +45,10 @@ TRAIN:
   GRADIENT_ACCUMULATION_STEPS: 1
 
 TEST:
-  FINAL_MODEL: "best_val"
+  EVALUATOR: "Segmentation"
+  OTHER_METRICS: false
+  SPLIT: "val"
+  FINAL_MODEL: "last_step"   # last_step best_val
   PER_CLASS_RESULT: false
 
 

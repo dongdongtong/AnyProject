@@ -62,7 +62,9 @@ class DataManager:
         # build transform
         if custom_base_tfm is None:
             base_tfm = build_transform(cfg, is_train=False, only_other_transforms=False)
-            print("* Using base transforms: ", base_tfm)
+            print("* Using base transforms: ")
+            for tfm in base_tfm.transforms:
+                print(tfm.__class__.__name__)
         else:
             print("* Using custom transform for testing")
             base_tfm = custom_base_tfm
