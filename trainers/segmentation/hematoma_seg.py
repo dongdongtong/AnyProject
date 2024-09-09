@@ -87,7 +87,7 @@ class HematomaSeg(TrainerX):
         # sliding-window evaluation
         self.infer = partial(
             sliding_window_inference,
-            roi_size=cfg.INPUT.ROI_SIZE,
+            roi_size=cfg.INPUT.ROI_SIZE,  # [128, 128, 12]
             sw_batch_size=4,
             predictor=self.model,
             overlap=0.5,
