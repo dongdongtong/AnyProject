@@ -104,22 +104,23 @@ class Segmentation(EvaluatorBase):
                 _assds.append(assd_val)
                 _hd95s.append(hd95_val)
 
+        # we do not report background performance, thus [1:]
         if self.need_other_metrics:
             print(
                 "=> result\n"
                 f"* total: {self._samples:,}\n"
-                f"* dice: {np.mean(_dices):.1f}%\n"
-                f"* asd: {np.mean(_asds):.3f}mm\n"
-                f"* assd: {np.mean(_assds):.3f}mm\n"
-                f"* hd95: {np.mean(_hd95s):.3f}mm\n"
-                f"* precision: {np.mean(_precisions):.1f}%\n"
+                f"* dice: {np.mean(_dices[1:]):.1f}%\n"
+                f"* asd: {np.mean(_asds[1:]):.3f}mm\n"
+                f"* assd: {np.mean(_assds[1:]):.3f}mm\n"
+                f"* hd95: {np.mean(_hd95s[1:]):.3f}mm\n"
+                f"* precision: {np.mean(_precisions[1:]):.1f}%\n"
             )
         else:
             print(
                 "=> result\n"
                 f"* total: {self._samples:,}\n"
-                f"* dice: {np.mean(_dices):.1f}%\n"
-                f"* precision: {np.mean(_precisions):.1f}%\n"
+                f"* dice: {np.mean(_dices[1:]):.1f}%\n"
+                f"* precision: {np.mean(_precisions[1:]):.1f}%\n"
             )
             
         results["dice"] = np.mean(_dices)
