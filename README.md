@@ -13,9 +13,9 @@ You need to define the structure of your dataset, read the available data from y
 Some steps:
 
 * create a dataset.py like `data/datasets/hematoma.py` to define the available data, including images, labels, segmentations.
-* import the DATASET_REGISTRY to register it.
+* Use the `DATASET_REGISTRY` to register it.
 * Define a dataset wrapper to help load the data like `HematomaSegWrapper` in `data/datasets/hematoma.py`.
-* Use the custom dataset name and dataset wrapper name in the configs/datasets/*.yml.
+* Use the custom dataset name and dataset wrapper name in the newly-created `configs/datasets/*.yml`.
 
 ## Add Custom Transforms
 Just follow the same steps as `Add Custom Dataset`.
