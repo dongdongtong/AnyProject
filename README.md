@@ -18,7 +18,8 @@ Some steps:
 * Use the custom dataset name and dataset wrapper name in the newly-created `configs/datasets/*.yml`.
 
 ## Add Custom Transforms
-Just follow the same steps as `Add Custom Dataset`.
+Just follow the same steps as `Add Custom Dataset`. 
+But now, you need create the custom transforms in the `data/transforms/hematoma_seg_augs.py`.
 
 ## Add Custom trainer
 Refer to `trainers/segmentation/hematoma_seg.py`.
