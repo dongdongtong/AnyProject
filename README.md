@@ -6,5 +6,25 @@ This project allows for custom transforms for medical image using MONAI. Check t
 
 For now, it cannot support multi-gpu distributed parallel training.
 
+It has contained an segmentation example.
+
+## Add Custom Dataset
+You need to define the structure of your dataset, read the available data from your original directory.
+Some steps:
+
+* create a dataset.py like `data/datasets/hematoma.py` to define the available data, including images, labels, segmentations.
+* import the DATASET_REGISTRY to register it.
+* Define a dataset wrapper to help load the data like `HematomaSegWrapper` in `data/datasets/hematoma.py`.
+* Use the custom dataset name and dataset wrapper name in the configs/datasets/*.yml.
+
+## Add Custom Transforms
+Just follow the same steps as `Add Custom Dataset`.
+
+## Add Custom trainer
+Refer to `trainers/segmentation/hematoma_seg.py`.
+
+## Run the code.
+For example, run `bash scripts/hematoma_seg/run.sh`.
+
 # Acknowledgement
 This project is heavily copied from [dassl](https://github.com/KaiyangZhou/Dassl.pytorch).
