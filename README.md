@@ -19,7 +19,7 @@ Some steps:
 
 ## Add Custom Transforms
 Just follow the same steps as `Add Custom Dataset`. 
-But now, you need create the custom transforms in the `data/transforms/hematoma_seg_augs.py`.
+But now, you need to create the custom transforms in the `data/transforms` like `data/transforms/hematoma_seg_augs.py`.
 
 ## Add Custom trainer
 Refer to `trainers/segmentation/hematoma_seg.py`.
