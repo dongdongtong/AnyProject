@@ -327,6 +327,7 @@ _C.TRAINER.FIXMATCH.STRONG_TRANSFORMS = ()
 ############################
 # Hematoma segmentation
 ############################
+_C.INPUT.RESIZE_SIZE = (416, 416, 32)  # only work if the transforms includes Resized within base transforms
 _C.INPUT.INTENSITY_RANGE = (0, 100)
 
 _C.MODEL.NAME = ""
