@@ -1,4 +1,4 @@
-"""Created by Dingsd on 2024/09/01.
+"""Created by Dingsd on 2024/09/13.
 In trainer, we should do:
 1. data loading pipeline
 2. model definition
@@ -14,8 +14,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import monai
-from monai.inferers import sliding_window_inference
-from monai.losses import DiceCELoss, DiceFocalLoss
 from functools import partial
 
 from torch.cuda.amp import autocast, GradScaler
@@ -34,16 +32,14 @@ from utils import (
 
 
 @TRAINER_REGISTRY.register()
-class HematomaSeg(TrainerX):
-    """We perform hematoma segmentation using UNet.
+class AllCombine(TrainerX):
+    """We perform hematoma expansion using combined data from multiple centers.
     """
     
     def check_cfg(self, cfg):
-        assert cfg.TRAINER.HEMATOMASEG.PREC in ["fp16", "fp32", "amp"]
+        assert cfg.TRAINER.ALLCOMBINE.PREC in ["fp16", "fp32", "amp"]
 
     def build_model(self):
-        # NOTE: we rebuild the evaluator here for segmentation task
-        self.evaluator = build_evaluator(cfg, lab2cname=self.lab2cname, spacing=self.dm.dataset.spacing)
         
         cfg = self.cfg
         classnames = self.dm.dataset.classnames
@@ -70,7 +66,7 @@ class HematomaSeg(TrainerX):
         self.sched = build_lr_scheduler(self.optim, cfg.OPTIM)
         self.register_model("model", self.model, self.optim, self.sched)
         
-        if cfg.TRAINER.HEMATOMASEG.PREC == "amp" or cfg.TRAINER.HEMATOMASEG.PREC == "fp32":
+        if cfg.TRAINER.ALLCOMBINE.PREC == "amp" or cfg.TRAINER.ALLCOMBINE.PREC == "fp32":
             self.model.float()
         else:
             self.model.half()
@@ -79,7 +75,7 @@ class HematomaSeg(TrainerX):
             #     if isinstance(module, nn.LayerNorm):
             #         module.float()
         
-        self.scaler = GradScaler() if cfg.TRAINER.HEMATOMASEG.PREC == "amp" else None
+        self.scaler = GradScaler() if cfg.TRAINER.ALLCOMBINE.PREC == "amp" else None
 
         # Note that multi-gpu training could be slow because CLIP's size is
         # big, which slows down the copy operation in DataParallel
@@ -87,45 +83,15 @@ class HematomaSeg(TrainerX):
         if device_count > 1:
             print(f"Multiple GPUs detected (n_gpus={device_count}), use all of them!")
             self.model = nn.DataParallel(self.model)
-        
-        # sliding-window evaluation
-        self.infer = partial(
-            sliding_window_inference,
-            roi_size=cfg.INPUT.ROI_SIZE,  # [128, 128, 12]
-            sw_batch_size=4,
-            predictor=self.model,
-            overlap=0.5,
-        )
-        
-        # losses
-        self.dice_ce_criterion = DiceCELoss(
-            include_background=True,
-            to_onehot_y=True,
-            softmax=True,
-            reduction="mean",
-            batch=True,
-        )
-        
-        self.dice_focal_criterion = DiceFocalLoss(
-            include_background=True,
-            to_onehot_y=True,
-            softmax=True,
-            reduction="mean",
-            batch=True,
-            gamma=2.0,
-        )
 
     def model_inference(self, image):
-        if self.cfg.TRAINER.HEMATOMASEG.SLIDING_WINDOW_INFER:
-            out = self.infer(image)
-        else:
-            out = self.model(image)
+        out = self.model(image)
         return out
     
-    def dice_ce_loss(self, images, labels):
+    def img_ce_loss(self, images, labels):
         logits = self.model(images)
         
-        loss = self.dice_ce_criterion(logits, labels)
+        loss = F.cross_entropy(logits, labels)
         
         self.model_backward_and_update(loss, grad_record=True, names=['model', ])  # update all parameters
         
@@ -133,10 +99,11 @@ class HematomaSeg(TrainerX):
             "loss": loss.detach()
         }
     
-    def dice_focal_loss(self, images, labels):
-        logits = self.model(images)
+    def img_seg_ce_loss(self, images, segs, labels):
+        inputs = torch.cat([images, segs], dim=1)
+        logits = self.model(inputs)
         
-        loss = self.dice_focal_criterion(logits, labels)
+        loss = F.cross_entropy(logits, labels)
         
         self.model_backward_and_update(loss, grad_record=True, names=['model', ])  # update all parameters
         
@@ -145,19 +112,19 @@ class HematomaSeg(TrainerX):
         }
     
     def get_loss(self, batch_x):
-        images, labels = self.parse_batch_train(batch_x)
+        images, segs, labels = self.parse_batch_train(batch_x)
         
-        if self.cfg.TRAINER.HEMATOMASEG.METHOD == 1:
-            loss_dict = self.dice_ce_loss(images, labels)
-        elif self.cfg.TRAINER.HEMATOMASEG.METHOD == 2:
-            loss_dict = self.dice_focal_loss(images, labels)
+        if self.cfg.TRAINER.ALLCOMBINE.METHOD == 1:
+            loss_dict = self.img_ce_loss(images, labels)
+        elif self.cfg.TRAINER.ALLCOMBINE.METHOD == 2:
+            loss_dict = self.img_seg_ce_loss(images, segs, labels)
         else:
-            raise ValueError(f"Unknown method: {self.cfg.TRAINER.HEMATOMASEG.METHOD}")
+            raise ValueError(f"Unknown method: {self.cfg.TRAINER.ALLCOMBINE.METHOD}")
         
         return loss_dict
 
     def forward_backward(self, batch_x):
-        prec = self.cfg.TRAINER.HEMATOMASEG.PREC
+        prec = self.cfg.TRAINER.ALLCOMBINE.PREC
 
         if prec == "amp":
             with autocast():
@@ -175,32 +142,30 @@ class HematomaSeg(TrainerX):
         
     def parse_batch_train(self, batch_x):
         input_x = batch_x["img"]
-        label_x = batch_x["seg"]
+        seg_x = batch_x["seg"]
+        label_x = batch_x["label"]
         
-        if input_x.dim() == 5:
-            input_x = input_x.to(self.device)
-            label_x = label_x.to(self.device)
-        elif input_x.dim() == 6: # for patch-based training
-            batch_size = input_x.size(0)   # B
-            patch_num = input_x.size(1)    # num_sampels in monai.biascrop
-            img_size = input_x.size()[2:]  # W H D
-            input_x = input_x.reshape(batch_size * patch_num, *img_size)
-            label_x = label_x.reshape(batch_size * patch_num, *img_size)
-            input_x = input_x.to(self.device)
-            label_x = label_x.to(self.device)
-        else:
-            raise ValueError(f"Unknown dimension of input_x: {input_x.dim()}")
+        input_x = input_x.to(self.device)
+        seg_x = seg_x.to(self.device)
+        label_x = label_x.to(self.device)
         
-        return input_x, label_x
+        return input_x, seg_x, label_x
 
     def parse_batch_test(self, batch):
         input_x = batch["img"]
-        label_x = batch["seg"]
+        seg_x = batch["seg"]
+        label_x = batch["label"]
         
         input_x = input_x.to(self.device)
+        seg_x = seg_x.to(self.device)
         label_x = label_x.to(self.device)
         
-        return input_x, label_x
+        if self.cfg.TRAINER.ALLCOMBINE.USE_SEG_MASK:
+            inputs = torch.cat([input_x, seg_x], dim=1)
+        else:
+            inputs = input_x
+        
+        return inputs, label_x
 
     def model_backward_and_update(self, loss, names=None, grad_record=False, grad_clip=False, grad_tag="g"):
         names = self.get_model_names(names)
@@ -208,7 +173,7 @@ class HematomaSeg(TrainerX):
         
         accumulate_steps = self.cfg.TRAIN.GRADIENT_ACCUMULATION_STEPS
 
-        if self.cfg.TRAINER.HEMATOMASEG.PREC == "amp":
+        if self.cfg.TRAINER.ALLCOMBINE.PREC == "amp":
             self.scaler.scale(loss / accumulate_steps).backward()
         else:
             (loss / accumulate_steps).backward()
@@ -235,7 +200,7 @@ class HematomaSeg(TrainerX):
                     print(f"Error in recording gradient: {e}, name: {name}")
         
         if (self.batch_idx + 1) % accumulate_steps == 0 or self.batch_idx == self.num_batches - 1:
-            if self.cfg.TRAINER.HEMATOMASEG.PREC == "amp":
+            if self.cfg.TRAINER.ALLCOMBINE.PREC == "amp":
                 for name in names:
                     if self._optims[name] is not None:
                         self.scaler.step(self._optims[name])

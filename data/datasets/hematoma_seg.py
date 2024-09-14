@@ -1,6 +1,4 @@
 """Created by Dingsd on 11/16/2022 22:21
-For pratical clinical 3D image, the axial slice is very hete but have large image size, so need to crop patch.
-The patch needs contains foreground hematoma, not randomly crop.
 """
 
 from collections.abc import Sequence

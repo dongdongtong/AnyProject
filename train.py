@@ -75,6 +75,11 @@ def extend_cfg(cfg):
     cfg.TRAINER.HEMATOMASEG.SLIDING_WINDOW_INFER = True
     cfg.TRAINER.HEMATOMASEG.METHOD = 1
     
+    cfg.TRAINER.ALLCOMBINE = CN()
+    cfg.TRAINER.ALLCOMBINE.PREC = "fp16"
+    cfg.TRAINER.ALLCOMBINE.USE_SEG_MASK = False
+    cfg.TRAINER.ALLCOMBINE.METHOD = 1
+    
 
 def setup_cfg(args):
     cfg = get_cfg_default()

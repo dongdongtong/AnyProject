@@ -43,6 +43,67 @@ class Datum:
     @property
     def classname(self):
         return self._classname
+    
+
+
+class PairDatum:
+    """Data instance which defines the basic attributes.
+
+    Args:
+        impath (str): image path.
+        impath2 (str): image path.
+        segpath (str): segmentation label path of impath (optional).
+        segpath2 (str): segmentation label path of impath2 (optional).
+        label (int): class label.
+        domain (int): domain label.
+        classname (str): class name.
+    """
+
+    def __init__(self, impath="", impath2="", segpath="", segpath2="", label=0, domain=0, classname=""):
+        assert isinstance(impath, str)
+        assert isinstance(impath2, str)
+        assert check_isfile(impath)
+        assert check_isfile(impath2)
+        if segpath:
+            assert check_isfile(segpath)
+        if segpath2:
+            assert check_isfile(segpath2)
+
+        self._impath = impath
+        self._impath2 = impath2
+        self._segpath = segpath
+        self._segpath2 = segpath2
+        self._label = label
+        self._domain = domain
+        self._classname = classname
+
+    @property
+    def impath(self):
+        return self._impath
+
+    @property
+    def impath2(self):
+        return self._impath2
+    
+    @property
+    def segpath(self):
+        return self._segpath
+    
+    @property
+    def segpath2(self):
+        return self._segpath2
+
+    @property
+    def label(self):
+        return self._label
+
+    @property
+    def domain(self):
+        return self._domain
+
+    @property
+    def classname(self):
+        return self._classname
 
 
 class SegmentationDatum:
@@ -94,7 +155,6 @@ class SegmentationDatum:
     @property
     def classname(self):
         return self._classname
-
 
 
 class DatasetBase:
