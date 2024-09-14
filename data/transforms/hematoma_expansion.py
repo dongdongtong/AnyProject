@@ -73,3 +73,29 @@ def hematoma_expansion_transforms(cfg, is_train=True, only_other_transforms=Fals
         transforms = base_transforms + spatial_transforms + intensity_transforms
     
     return tfs.Compose(transforms)
+
+
+@TRANSFORM_REGISTRY.register()
+def hematoma_expansion_base_transforms(cfg, is_train=True, only_other_transforms=False):
+    image_size = cfg.INPUT.SIZE
+    resize_size = cfg.INPUT.RESIZE_SIZE  # the resize size of the entire brain
+    intensity_range = cfg.INPUT.INTENSITY_RANGE  # clip image intensity to [minv, maxv]
+    
+    img_key = 'img'
+    seg_key = 'seg'
+    keys = [img_key, seg_key]
+    
+    base_transforms = [
+        tfs.LoadImaged(keys=keys),
+        tfs.EnsureChannelFirstd(keys=keys),
+        tfs.Orientationd(keys=keys, axcodes='RAS'),
+        tfs.ResizeWithPadOrCropd(keys=keys, spatial_size=image_size, mode='edge', method='symmetric'),
+        TrancateIntensityd(keys=keys, minv=intensity_range[0], maxv=intensity_range[1], image_key=img_key),
+        tfs.ScaleIntensityd(keys=img_key, minv=0.0, maxv=1.0),
+        tfs.Resized(keys=keys, spatial_size=resize_size, mode=['area', 'nearest']),
+    ]
+    
+    if not is_train:
+        return tfs.Compose(base_transforms)
+    
+    return None

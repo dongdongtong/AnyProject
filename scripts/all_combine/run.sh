@@ -22,7 +22,7 @@ SOURCE_DOMAINS=("high_quality")
 SOURCE_DOMAINS_STR="${SOURCE_DOMAINS[*]}"
 SOURCE_DOMAINS_STR="${SOURCE_DOMAINS_STR// /_}"  # Replace spaces with underscores
 
-DIR=output/${DATASET}/${TRAINER}/${CFG}/${SOURCE_DOMAINS_STR}/method${METHOD}_seed${SEED}
+DIR=output/hematoma_expansion/${DATASET}/${TRAINER}/${CFG}/${SOURCE_DOMAINS_STR}/method${METHOD}_seed${SEED}
 if [ -d "$DIR" ]; then
     echo "Results are available in ${DIR}."
 else
